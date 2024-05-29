@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Search Solver</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Word Search Solver</h1>
+        <div>
+            <label for="puzzleInput">Upload Puzzle CSV:</label>
+            <input type="file" id="puzzleInput" accept=".csv">
+        </div>
+        <div>
+            <label for="wordsInput">Upload Words List CSV:</label>
+            <input type="file" id="wordsInput" accept=".csv">
+        </div>
+        <button onclick="loadFiles()">Load Files</button>
+        <button onclick="solvePuzzle()">Solve Puzzle</button>
+        <div id="puzzleContainer"></div>
+        <div id="solutionContainer"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+<style>
+/* styles.css */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    text-align: center;
+    max-width: 800px;
+    width: 100%;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+
+input[type="file"] {
+    margin: 10px 0;
+}
+
+button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#puzzleContainer, #solutionContainer {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20px, 1fr));
+    gap: 1px;
+    justify-content: center;
+}
+
+.cell {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #ddd;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.cell.red {
+    color: red;
+}
+
+.cell.blue {
+    color: blue;
+}
+</style>
+<script>
+// script.js
+
+let puzzle = [];
+let words = [];
+let solved = [];
+
+function loadFiles() {
+    const puzzleFile = document.getElementById('puzzleInput').files[0];
+    const wordsFile = document.getElementById('wordsInput').files[0];
+
+    if (puzzleFile && wordsFile) {
+        const puzzleReader = new FileReader();
+        const wordsReader = new FileReader();
+
+        puzzleReader.onload = function(event) {
+            const puzzleText = event.target.result;
+            puzzle = parseCSV(puzzleText);
+            displayPuzzle(puzzle, 'puzzleContainer');
+        };
+
+        wordsReader.onload = function(event) {
+            const wordsText = event.target.result;
+            words = parseCSV(wordsText).map(row => row[0].replace(' ', ''));
+        };
+
+        puzzleReader.readAsText(puzzleFile);
+        wordsReader.readAsText(wordsFile);
+    } else {
+        alert("Please upload both files.");
+    }
+}
+
+function parseCSV(text) {
+    const rows = text.trim().split('\n');
+    return rows.map(row => row.split(','));
+}
+
+function displayPuzzle(puzzle, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    const size = puzzle[0][0].length; // Assuming the puzzle is square
+    container.style.gridTemplateColumns = `repeat(${size}, 20px)`;
+
+    puzzle.forEach((row, ri) => {
+        row[0].split('').forEach((ch, chi) => {
+            const cell = document.createElement('div');
+            cell.className = 'cell blue';
+            cell.textContent = ch;
+            container.appendChild(cell);
+        });
+    });
+}
+
+function solvePuzzle() {
+    solved = [];
+    words.forEach(word => {
+        if (findHorizontal(word) || findVertical(word) || findDiagonal(word)) {
+            // Found the word, no further action needed.
+        }
+    });
+    displaySolution();
+}
+
+function displaySolution() {
+    const container = document.getElementById('solutionContainer');
+    container.innerHTML = '';
+    const size = puzzle[0][0].length; // Assuming the puzzle is square
+    container.style.gridTemplateColumns = `repeat(${size}, 20px)`;
+
+    puzzle.forEach((row, ri) => {
+        row[0].split('').forEach((ch, chi) => {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            if (solved.some(pos => pos[0] === ri && pos[1] === chi)) {
+                cell.classList.add('red');
+            } else {
+                cell.classList.add('blue');
+            }
+            cell.textContent = ch;
+            container.appendChild(cell);
+        });
+    });
+}
+
+function findHorizontal(word) {
+    for (let ri = 0; ri < puzzle.length; ri++) {
+        const row = puzzle[ri][0];
+        const index = row.indexOf(word);
+        if (index !== -1) {
+            for (let i = 0; i < word.length; i++) {
+                solved.push([ri, index + i]);
+            }
+            return true;
+        }
+        const indexRev = row.split('').reverse().join('').indexOf(word);
+        if (indexRev !== -1) {
+            for (let i = 0; i < word.length; i++) {
+                solved.push([ri, row.length - indexRev - 1 - i]);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+function findVertical(word) {
+    for (let col = 0; col < puzzle[0][0].length; col++) {
+        let colStr = '';
+        for (let row = 0; row < puzzle.length; row++) {
+            colStr += puzzle[row][0][col];
+        }
+        const index = colStr.indexOf(word);
+        if (index !== -1) {
+            for (let i = 0; i < word.length; i++) {
+                solved.push([index + i, col]);
+            }
+            return true;
+        }
+        const indexRev = colStr.split('').reverse().join('').indexOf(word);
+        if (indexRev !== -1) {
+            for (let i = 0; i < word.length; i++) {
+                solved.push([colStr.length - indexRev - 1 - i, col]);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+function findDiagonal(word) {
+    const R = puzzle.length;
+    const C = puzzle[0][0].length;
+    const directions = [
+        { r: 1, c: 1 },
+        { r: 1, c: -1 },
+        { r: -1, c: 1 },
+        { r: -1, c: -1 }
+    ];
+
+    for (let d = 0; d < directions.length; d++) {
+        const dir = directions[d];
+        for (let row = 0; row < R; row++) {
+            for (let col = 0; col < C; col++) {
+                let r = row;
+                let c = col;
+                let found = true;
+                for (let i = 0; i < word.length; i++) {
+                    if (r < 0 || r >= R || c < 0 || c >= C || puzzle[r][0][c] !== word[i]) {
+                        found = false;
+                        break;
+                    }
+                    r += dir.r;
+                    c += dir.c;
+                }
+                if (found) {
+                    r = row;
+                    c = col;
+                    for (let i = 0; i < word.length; i++) {
+                        solved.push([r, c]);
+                        r += dir.r;
+                        c += dir.c;
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+</script>
